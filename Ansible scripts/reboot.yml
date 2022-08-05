@@ -1,0 +1,7 @@
+- name: reboot
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: reboot
+      shell: reboot

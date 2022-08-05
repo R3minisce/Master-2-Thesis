@@ -1,0 +1,12 @@
+- name: ZRAM optimisations
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: disable swap files
+      shell: wget -O - https://teejeetech.com/scripts/jammy/disable_swapfile | bash
+
+    - name: ZRAM compression installation
+      apt:
+        name: zram-config
+        state: latest

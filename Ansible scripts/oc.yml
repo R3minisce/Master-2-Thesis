@@ -1,0 +1,7 @@
+- name: Change config
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: Copy config file from NAS
+      shell: cp /home/pi/cluster_shared/config_2100_6_750_bt_wifi_led.txt /boot/firmware/config.txt

@@ -1,0 +1,7 @@
+- name: change HPL.dat config
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: Copy HPL.dat file
+      shell: cp /home/pi/cluster_shared/HPL.dat /home/pi/rpi-hpl-workdir/hpl-2.3/bin/rpi4-mpich/HPL.dat

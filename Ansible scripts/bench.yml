@@ -1,0 +1,206 @@
+# Cette partie Master met en place la structure de fichier nécessaire
+# et défini les variables à fournir aux nodes.
+  - name: Setting up benchmark by Master
+    hosts: master
+    tasks:
+      - name: Set directory
+        shell: echo "benchmark_$(uuidgen -t)"
+        register: command_output
+
+      - name: Set directory as fact ( share )
+        set_fact:
+          directory: "{{ command_output.stdout }}"
+
+      - name: Create the benchmark directory
+        ansible.builtin.file:
+          path: /home/$USER/cluster_shared/{{ directory }}
+          state: directory
+          mode: '0755'
+
+# Cette partie lance les benchmarks sur l'ensemble des nodes
+  - name: Benchmarking tools execution on Nodes
+    hosts: cluster
+    #hosts: master
+    vars:
+      benchdir: "{{ hostvars[groups['master'][0]]['directory'] }}"
+      time: 60
+    tasks:
+      - name: Get node infos
+        shell: echo "$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
+        register: nodeid
+
+      - name: Create the node directory (if it does not exist)
+        ansible.builtin.file:
+          path: /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}
+          state: directory
+          mode: '0755'
+
+# Benchmarks sysbench
+      - name: Run sysbench - cpu benchmark
+        shell: sysbench cpu --cpu-max-prime=20000 --num-threads=4 run > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/sysbench_cpu.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: Run sysbench - memory benchmark
+        shell: sysbench memory --num-threads=4 run > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/sysbench_memory.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: Run sysbench - fileio benchmark
+        shell: sysbench fileio --file-total-size=6G prepare > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/sysbench_fileio.txt
+
+      - name: Run sysbench - fileio benchmark
+        shell: sysbench fileio --file-total-size=6G --num-threads=4 --file-test-mode=rndrw --max-time=300 --max-requests=0 run > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/sysbench_fileio.txt
+
+      - name: Run sysbench - fileio benchmark
+        shell: sysbench fileio --file-total-size=6G cleanup
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+# Benchmark hardinfo
+      - name: Run hardinfo
+        shell: hardinfo -f text > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/hardinfo.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+# Benchmark 7Z
+      - name: Run 7z - compression benchmark
+        shell: 7z b -mm=* -mmt=* > /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/7z.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+# Benchmark iperf
+      - name: launch iperf 8k
+        shell: iperf -fM -c 192.113.50.101 -w 8k > iperf.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch iperf 64k
+        shell: iperf -fM -c 192.113.50.101 -w 64k >> iperf.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch iperf 256k
+        shell: iperf -fM -c 192.113.50.101 -w 256k >> iperf.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch iperf 512k
+        shell: iperf -fM -c 192.113.50.101 -w 512k >> iperf.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch iperf 1024k
+        shell: iperf -fM -c 192.113.50.101 -w 1024k >> iperf.txt
+
+      - name: save iperf file
+        shell: mv iperf.txt /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/iperf.txt
+
+      - name: Set directory
+        shell: echo "dd_$(uuidgen -t)"
+        register: command_output
+
+# Benchmark dd
+  # Sur NAS
+#      - name: launch dd
+#        shell: dd if=/dev/zero of=/home/pi/cluster_shared/{{ command_output.stdout }}.img bs=256M count=1 conv=fdatasync 2> dd.txt
+
+#      - name: Sleep
+#        pause:
+#          seconds: "{{ time | int }}"
+#
+#      - name: launch dd
+#        shell: dd if=/dev/zero of=/home/pi/cluster_shared/{{ command_output.stdout }}.img bs=512M count=1 conv=fdatasync 2>> dd.txt
+
+#      - name: Sleep
+#        pause:
+#          seconds: "{{ time | int }}"
+
+#      - name: launch dd
+#        shell: dd if=/dev/zero of=/home/pi/cluster_shared/{{ command_output.stdout }}.img bs=1G count=1 conv=fdatasync 2>> dd.txt
+
+  # Sur SD
+
+      - name: launch dd
+        shell: dd if=/dev/zero of=/home/pi/{{ command_output.stdout }}.img bs=256M count=1 conv=fdatasync 2>> dd.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch dd
+        shell: dd if=/dev/zero of=/home/pi/{{ command_output.stdout }}.img bs=512M count=1 conv=fdatasync 2>> dd.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+      - name: launch dd
+        shell: dd if=/dev/zero of=/home/pi/{{ command_output.stdout }}.img bs=1G count=1 conv=fdatasync 2>> dd.txt
+
+  # Save
+
+      - name: save dd file
+        shell: mv dd.txt /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/dd.txt
+
+      - name: Sleep
+        pause:
+          seconds: "{{ time | int }}"
+
+# Nécessite les permissions SUDO pour lancer hdparm
+  - name: hdparm client
+    hosts: cluster
+    #hosts: master
+    become: yes
+    tasks:
+      - name: Get node infos
+        shell: echo "$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
+        register: nodeid
+
+      - name: launch hdparm
+        shell: sudo hdparm -tT /dev/mmcblk0p2 > hdparm.txt
+
+      - name: launch hdparm
+        shell: sudo hdparm -tT --direct /dev/mmcblk0p2 >> hdparm.txt
+
+# Sauvegarde des fichiers
+  - name: hdparm client
+    hosts: cluster
+    #hosts: master
+    vars:
+      benchdir: "{{ hostvars[groups['master'][0]]['directory'] }}"
+    tasks:
+      - name: Get node infos
+        shell: echo "$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
+        register: nodeid
+
+      - name: save hdparm file
+        shell: mv hdparm.txt /home/$USER/cluster_shared/{{ benchdir }}/{{ nodeid.stdout }}/hdparm.txt
+
+# Cleaning des fichiers par le master
+  - name: Cleaning up  by Master
+    hosts: master
+    tasks:
+      - name: Clean dd images
+        shell: rm -rf /home/pi/cluster_shared/dd_*
+
+      - name: Clean dd images
+        shell: rm -rf /home/pi/test*

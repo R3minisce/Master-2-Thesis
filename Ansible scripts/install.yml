@@ -1,0 +1,44 @@
+- name: tools installation
+  hosts: master
+  become: yes
+  tasks:
+
+    - name: iperf installation
+      apt:
+        name: iperf
+        state: latest
+
+- name: tools installation
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: sysbench installation
+      apt:
+        name: sysbench
+        state: latest
+
+    - name: hardinfo installation
+      apt:
+        name: hardinfo
+        state: latest
+
+    - name: p7zip-full installation
+      apt:
+        name: p7zip-full
+        state: latest
+
+    - name: iperf installation
+      apt:
+        name: iperf
+        state: latest
+
+    - name: hdparm installation
+      apt:
+        name: hdparm
+        state: latest
+
+    - name: uuidgen installation
+      apt:
+        name: uuid-runtime
+        state: latest

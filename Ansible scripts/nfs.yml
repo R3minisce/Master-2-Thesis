@@ -1,0 +1,21 @@
+- name: nfs folder cluster setup
+  hosts: cluster
+  become: yes
+  tasks:
+  
+    - name: nfs-common installation
+      apt:
+        name: nfs-common
+        state: latest
+
+    - name: Create the nfs directory
+      ansible.builtin.file:
+        path: /home/pi/cluster_shared
+        owner: pi
+        group: pi
+        state: directory
+        mode: '0766'
+
+    - name: Set share folder
+      shell: sudo mount -t nfs 192.113.50.105:/volume1/cluster/ /home/pi/cluster_shared
+      register: command_output

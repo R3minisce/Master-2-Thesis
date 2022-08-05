@@ -1,0 +1,29 @@
+- name: Jupyter installation
+  hosts: master
+  become: yes
+  tasks:
+  
+    - name: python3-pip installation
+      apt:
+        name: python3-pip
+        state: latest
+
+    - name: python3-dev installation
+      apt:
+        name: python3-dev
+        state: latest
+
+    - name: upgrade pip
+      shell: pip3 install --upgrade pip
+
+    - name: Create the node directory (if it does not exist)
+      ansible.builtin.file:
+        path: /home/pi/notebook
+        state: directory
+        mode: '0755'
+
+    - name: install jupyter
+      shell: cd /home/pi/notebook && pip install jupyter
+
+# You can then launch jupyter with the following command :
+# cd /home/pi/notebook && jupyter notebook --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
